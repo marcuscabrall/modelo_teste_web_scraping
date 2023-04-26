@@ -1,0 +1,71 @@
+import re
+import io
+import PyPDF2
+import time
+import datetime
+import requests
+from selenium import webdriver
+from webdriver_manager.firefox import GeckoDriverManager
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+servico = Service(GeckoDriverManager().install())
+navegador = webdriver.Firefox(service = servico)
+
+navegador.get('https://www.tinus.com.br/csp/JABOATAO/portal/index.csp')
+current_handle = navegador.current_window_handle
+
+#Menu lateral do Portal
+iframeA = navegador.find_element(By.XPATH, '//*[@id="menuFrame"]')
+navegador.switch_to.frame(iframeA)
+navegador.find_element('xpath', '/html/body/form/div[2]/div/li[18]/a').click()
+navegador.switch_to.default_content()
+
+#MainFrame
+iframeB = navegador.find_element(By.XPATH, '//*[@id="mainFrame"]')
+navegador.switch_to.frame(iframeB)
+
+elem = WebDriverWait(navegador, 3).until(EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'Legislação Tributária do Município')]")))
+elem.click()
+
+elem1 = WebDriverWait(navegador, 3).until(EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'C.T.M. 00.01.01/1991')]")))
+elem1.click()
+
+# mudar para a nova guia
+for handle in navegador.window_handles:
+    navegador.switch_to.window(navegador.window_handles[1])
+    if navegador.current_url != 'about:blank':
+        break
+
+while True:
+    if navegador.execute_script("return document.readyState") == "complete":
+        break
+
+pdf_url = navegador.current_url
+
+response = requests.get(pdf_url)
+with open('lei.pdf', 'wb') as f:
+    f.write(response.content)
+
+with open('lei.pdf', 'rb') as f:
+    pdf_reader = PyPDF2.PdfReader(f, strict=False)
+    for page_num in range(len(pdf_reader.pages)):
+        page = pdf_reader.pages[page_num]
+        text = ''.join(page.extract_text().split())
+        
+        if 'NotaOínfimovalor,conformeprevistonestaalínea“c”,foiestabelecidonostermosdaLeiMunicipalnº1.403/2019,de30/05/2019,cujovalor,paraoexercíciode2023,éequivalentea' in text:
+            match = re.search(r'NotaOínfimovalor,conformeprevistonestaalínea“c”,foiestabelecidonostermosdaLeiMunicipalnº1.403/2019,de30/05/2019,cujovalor,paraoexercíciode2023,éequivalenteaR\$(\d+,\d{2})', text)
+            if match:
+                valor = match.group(1)
+                print(f'\nÍnfimo Valor R$ {valor}')
+            else:
+                valor = None
+                print('\nNada encontrado!')
+                break
+                
+inf_valor = valor.replace(',', '.')
+inf_valor  = float(inf_valor)
+
+navegador.quit()

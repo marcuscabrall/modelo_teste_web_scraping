@@ -1,5 +1,6 @@
 # modelo_teste_web_scraping
 Modelo de teste de web scraping com a utilização de python, por meio da biblioteca Selenium.
+
 Web scraping test model using Python with the Selenium library.
 
 Obs: Existem alguns imports de bibliotecas que talvez não façam sentido no código atual, porém deverá ser considerado que o código é um trecho extraído de um código principal, contendo mais funções e uam destinação mais complexa.
